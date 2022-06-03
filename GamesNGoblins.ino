@@ -11,6 +11,8 @@ int buttonPressed = -1;
 int lives = 3;
 int score = 0;
 unsigned long now = 0;
+int wrongMove = 0;
+int gamePhase = 0;
 
 
 
@@ -192,10 +194,19 @@ void setup() {
 
 }
 
-void loop() {
+void checkInput() {
+  now = millis();
+  if (board[(4 * buttonPressed) + randomPart] == -1) {
+    board[(4 * buttonPressed) + randomPart] = randomFace;
+  }
+  else {
+    wrongMove = 1;
+  }
+}
 
+void checkForClearedFaces() {
   //check for cleared faces
-  for (int i = 0; i < 12; i += 4) {
+  for (int i = 0; i <= 12; i += 4) {
     if (board[i + 0] != -1 && board[i + 1] != -1 && board[i + 2] != -1 && board[i + 3] != -1) {
       if (board[i + 0] == board[i + 1] && board[i + 0] == board[i + 2] && board[i + 0] == board[i + 3]) {
         score += 300;
@@ -226,133 +237,156 @@ void loop() {
       arduboy.invert(false);
     }
   }
+}
 
-  arduboy.clear();
-  arduboy.pollButtons();
-  int wrongMove = 0;
+void loop() {
 
-  if (millis() >= now + 5000) {
-    wrongMove = 1;
-    now = millis();
-  }
 
-  if (arduboy.justPressed(LEFT_BUTTON)) {
-    now = millis();
-    buttonPressed = 0;
-    if (board[(4 * buttonPressed) + randomPart] == -1) {
-      board[(4 * buttonPressed) + randomPart] = randomFace;
+  if (gamePhase == 0) {
+
+    arduboy.clear();
+
+    arduboy.pollButtons();
+
+    arduboy.setCursor(20, 0);
+    arduboy.print("Games'N Goblins:");
+    arduboy.setCursor(40, 10);
+    arduboy.print("The Game");
+    arduboy.setCursor(20, 50);
+    arduboy.print("Press Button A!");
+    if (arduboy.justPressed(A_BUTTON)) {
+      gamePhase++;
+      now = millis();
     }
-    else {
+    arduboy.display();
+  }
+  else if (gamePhase == 1) {
+
+    checkForClearedFaces();
+
+    arduboy.clear();
+    arduboy.pollButtons();
+
+    if (millis() >= now + 5000) {
       wrongMove = 1;
+      now = millis();
     }
-  }
-  if (arduboy.justPressed(UP_BUTTON)) {
-    now = millis();
-    buttonPressed = 1;
-    if (board[(4 * buttonPressed) + randomPart] == -1) {
-      board[(4 * buttonPressed) + randomPart] = randomFace;
-    }
-    else {
-      wrongMove = 1;
-    }
-  }
-  if (arduboy.justPressed(RIGHT_BUTTON)) {
-    now = millis();
-    buttonPressed = 2;
-    if (board[(4 * buttonPressed) + randomPart] == -1) {
-      board[(4 * buttonPressed) + randomPart] = randomFace;
-    }
-    else {
-      wrongMove = 1;
-    }
-  }
-  if (arduboy.justPressed(DOWN_BUTTON)) {
-    now = millis();
-    buttonPressed = 3;
-    if (board[(4 * buttonPressed) + randomPart] == -1) {
-      board[(4 * buttonPressed) + randomPart] = randomFace;
-    }
-    else {
-      wrongMove = 1;
-    }
-  }
 
-  if (buttonPressed >= 0) {
-    randomFace = random(0, 4);
-    randomPart = generateRandomPart();
-    buttonPressed = -1;
-  }
+    if (arduboy.justPressed(LEFT_BUTTON)) {
+      buttonPressed = 0;
+      checkInput();
+    }
+    if (arduboy.justPressed(UP_BUTTON)) {
+      buttonPressed = 1;
+      checkInput();
+    }
+    if (arduboy.justPressed(RIGHT_BUTTON)) {
+      buttonPressed = 2;
+      checkInput();
+    }
+    if (arduboy.justPressed(DOWN_BUTTON)) {
+      buttonPressed = 3;
+      checkInput();
+    }
+
+    if (buttonPressed >= 0) {
+      randomFace = random(0, 4);
+      randomPart = generateRandomPart();
+      buttonPressed = -1;
+    }
 
 
-  //debugging tools
-  /*int ht = 0;
-    arduboy.setCursor(70, ht);
-    arduboy.print("face: ");
-    arduboy.print(randomFace);
-    arduboy.setCursor(70, ht += 10);
-    arduboy.print("part: ");
-    arduboy.print(randomPart);
-    arduboy.setCursor(70, ht += 10);
-    for (int i = 0; i < 16; i++) {
-    if (i % 4 == 0 && i != 0) {
+    //debugging tools
+    /*int ht = 0;
+      arduboy.setCursor(70, ht);
+      arduboy.print("face: ");
+      arduboy.print(randomFace);
       arduboy.setCursor(70, ht += 10);
+      arduboy.print("part: ");
+      arduboy.print(randomPart);
+      arduboy.setCursor(70, ht += 10);
+      for (int i = 0; i < 16; i++) {
+      if (i % 4 == 0 && i != 0) {
+        arduboy.setCursor(70, ht += 10);
+      }
+      arduboy.print(board[i]);
+      }*/
+    //arduboy.print(millis());
+
+    if (wrongMove) {
+      lives--;
+      wrongMove = 0;
+      arduboy.invert(true);
+      delay(100);
+      arduboy.invert(false);
+      delay(100);
+      arduboy.invert(true);
+      delay(100);
+      arduboy.invert(false);
+      delay(100);
+      arduboy.invert(true);
+      delay(100);
+      arduboy.invert(false);
     }
-    arduboy.print(board[i]);
-    }*/
-  //arduboy.print(millis());
 
-  if (wrongMove) {
-    lives--;
-    wrongMove = 0;
-    arduboy.invert(true);
-    delay(100);
-    arduboy.invert(false);
-    delay(100);
-    arduboy.invert(true);
-    delay(100);
-    arduboy.invert(false);
-    delay(100);
-    arduboy.invert(true);
-    delay(100);
-    arduboy.invert(false);
-  }
-
-  //print all faces
-  for (int i = 0; i < 16; i++) {
-    if (board[i] != -1) {
-      printFacePartOnPosition( xCoordinates[i], yCoordinates[i], board[i], i % 4);
+    //print all faces
+    for (int i = 0; i < 16; i++) {
+      if (board[i] != -1) {
+        printFacePartOnPosition( xCoordinates[i], yCoordinates[i], board[i], i % 4);
+      }
     }
-  }
 
-  printFacePartOnPosition( 27, 27, randomFace, randomPart);
+    printFacePartOnPosition( 27, 27, randomFace, randomPart);
 
-  if (lives == 3) {
-    Sprites::drawOverwrite(70, 0, fullHeart, 0);
-    Sprites::drawOverwrite(90, 0, fullHeart, 0);
-    Sprites::drawOverwrite(110, 0, fullHeart, 0);
+    if (lives == 3) {
+      Sprites::drawOverwrite(70, 0, fullHeart, 0);
+      Sprites::drawOverwrite(90, 0, fullHeart, 0);
+      Sprites::drawOverwrite(110, 0, fullHeart, 0);
 
-  }
-  else if (lives == 2) {
-    Sprites::drawOverwrite(70, 0, fullHeart, 0);
-    Sprites::drawOverwrite(90, 0, fullHeart, 0);
-    Sprites::drawOverwrite(110, 0, emptyHeart, 0);
-  }
-  else if (lives == 1) {
-    Sprites::drawOverwrite(70, 0, fullHeart, 0);
-    Sprites::drawOverwrite(90, 0, emptyHeart, 0);
-    Sprites::drawOverwrite(110, 0, emptyHeart, 0);
-  }
-  else {
-    Sprites::drawOverwrite(70, 0, emptyHeart, 0);
-    Sprites::drawOverwrite(90, 0, emptyHeart, 0);
-    Sprites::drawOverwrite(110, 0, emptyHeart, 0);
-  }
+    }
+    else if (lives == 2) {
+      Sprites::drawOverwrite(70, 0, fullHeart, 0);
+      Sprites::drawOverwrite(90, 0, fullHeart, 0);
+      Sprites::drawOverwrite(110, 0, emptyHeart, 0);
+    }
+    else if (lives == 1) {
+      Sprites::drawOverwrite(70, 0, fullHeart, 0);
+      Sprites::drawOverwrite(90, 0, emptyHeart, 0);
+      Sprites::drawOverwrite(110, 0, emptyHeart, 0);
+    }
 
-  //draw background
-  arduboy.drawRect(21, 0, 22, 22);
-  arduboy.drawRect(0, 21, 22, 22);
-  arduboy.drawRect(42, 21, 22, 22);
-  arduboy.drawRect(21, 42, 22, 22);
+    //draw background
+    arduboy.drawRect(21, 0, 22, 22);
+    arduboy.drawRect(0, 21, 22, 22);
+    arduboy.drawRect(42, 21, 22, 22);
+    arduboy.drawRect(21, 42, 22, 22);
 
-  arduboy.display();
+    if (lives <= 0) {
+      gamePhase = 2;
+    }
+
+    arduboy.display();
+  }
+  else if (gamePhase == 2) {
+    arduboy.clear();
+
+    arduboy.pollButtons();
+
+    arduboy.setCursor(20, 0);
+    arduboy.print("GAME OVER");
+    arduboy.setCursor(40, 10);
+    arduboy.print("Play again");
+    arduboy.setCursor(20, 50);
+    arduboy.print("Press Button A!");
+    if (arduboy.justPressed(A_BUTTON)) {
+      gamePhase = 1;
+      lives = 3;
+      score = 0;
+      for(int i = 0; i<16;i++){
+        board[i] = -1;
+      }
+      now = millis();
+    }
+    arduboy.display();
+  }
 }
