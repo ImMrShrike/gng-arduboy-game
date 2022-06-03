@@ -13,7 +13,10 @@ int score = 0;
 unsigned long now = 0;
 int wrongMove = 0;
 int gamePhase = 0;
-
+int firstRowofClouds = 0;
+int secondRowofClouds = 0;
+int lightning = 0;
+int timerSize = 5000;
 
 
 //ordine sinistra sopra destra sotto
@@ -112,6 +115,13 @@ const uint8_t PROGMEM goblin[] = {
   0x00, 0x00, 0x00, 0x1f, 0x20, 0x26, 0x24, 0x76, 0x64, 0x27, 0x24, 0x20, 0x1f, 0x00, 0x00, 0x00,
 };
 
+const uint8_t PROGMEM cloud[] = {
+  16, 8,
+  0x50, 0x9c, 0x86, 0x02, 0x02, 0x06, 0x0c, 0x18, 0x34, 0x26, 0x22, 0x12, 0x11, 0x23, 0x0e, 0x08,
+};
+
+
+
 //genera un pezzo a caso che sia possibile inserire nelle caselle vuote disponibili
 int generateRandomPart() {
   int rnd = 0;
@@ -201,6 +211,7 @@ void checkInput() {
   }
   else {
     wrongMove = 1;
+    timerSize += 200;
   }
 }
 
@@ -235,6 +246,13 @@ void checkForClearedFaces() {
       arduboy.invert(true);
       delay(100);
       arduboy.invert(false);
+      if (timerSize < 1000) {
+        timerSize = 1000;
+      }
+      else {
+        timerSize -= 100;
+      }
+      now = millis();
     }
   }
 }
@@ -248,11 +266,46 @@ void loop() {
 
     arduboy.pollButtons();
 
-    arduboy.setCursor(20, 0);
-    arduboy.print("Games'N Goblins:");
-    arduboy.setCursor(40, 10);
+
+    Sprites::drawOverwrite((firstRowofClouds % 144) - 15, 8, cloud, 0);
+    Sprites::drawOverwrite(((firstRowofClouds + 12) % 144) - 15, 7, cloud, 0);
+    Sprites::drawOverwrite(((firstRowofClouds + 30) % 144) - 15, 9, cloud, 0);
+    Sprites::drawOverwrite(((firstRowofClouds + 42) % 144) - 15, 7, cloud, 0);
+    Sprites::drawOverwrite(((firstRowofClouds + 60) % 144) - 15, 8, cloud, 0);
+    Sprites::drawOverwrite(((firstRowofClouds + 100) % 144) - 15, 7, cloud, 0);
+    Sprites::drawOverwrite(((firstRowofClouds + 115) % 144) - 15, 8, cloud, 0);
+    Sprites::drawOverwrite(((firstRowofClouds + 122) % 144) - 15, 9, cloud, 0);
+
+    Sprites::drawOverwrite((secondRowofClouds % 144 + 4) - 15, 12, cloud, 0);
+    Sprites::drawOverwrite(((secondRowofClouds + 17) % 144) - 15, 13, cloud, 0);
+    Sprites::drawOverwrite(((secondRowofClouds + 28) % 144) - 15, 11, cloud, 0);
+    Sprites::drawOverwrite(((secondRowofClouds + 45) % 144) - 15, 14, cloud, 0);
+    Sprites::drawOverwrite(((secondRowofClouds + 57) % 144) - 15, 15, cloud, 0);
+    Sprites::drawOverwrite(((secondRowofClouds + 71) % 144) - 15, 11, cloud, 0);
+    Sprites::drawOverwrite(((secondRowofClouds + 84) % 144) - 15, 12, cloud, 0);
+    Sprites::drawOverwrite(((secondRowofClouds + 99) % 144) - 15, 11, cloud, 0);
+    Sprites::drawOverwrite(((secondRowofClouds + 110) % 144) - 15, 10, cloud, 0);
+    arduboy.drawCircle(15, 9, 9);
+    secondRowofClouds += 2;
+    firstRowofClouds++;
+
+    if (random(0, 80) == 0) {
+      for (int i = 0; i <= random(1, 4); i++) {
+        arduboy.invert(++lightning % 2);
+        delay(100);
+        arduboy.invert(++lightning % 2);
+        delay(100);
+      }
+    }
+
+    delay(100);
+
+
+    arduboy.setCursor(20, 25);
+    arduboy.print("Games'N Goblins");
+    arduboy.setCursor(40, 35);
     arduboy.print("The Game");
-    arduboy.setCursor(20, 50);
+    arduboy.setCursor(20, 55);
     arduboy.print("Press Button A!");
     if (arduboy.justPressed(A_BUTTON)) {
       gamePhase++;
@@ -267,7 +320,7 @@ void loop() {
     arduboy.clear();
     arduboy.pollButtons();
 
-    if (millis() >= now + 5000) {
+    if (millis() >= now + timerSize) {
       wrongMove = 1;
       now = millis();
     }
@@ -295,7 +348,6 @@ void loop() {
       buttonPressed = -1;
     }
 
-
     //debugging tools
     /*int ht = 0;
       arduboy.setCursor(70, ht);
@@ -310,8 +362,8 @@ void loop() {
         arduboy.setCursor(70, ht += 10);
       }
       arduboy.print(board[i]);
-      }*/
-    //arduboy.print(millis());
+      }
+      arduboy.print(timerSize);*/
 
     if (wrongMove) {
       lives--;
@@ -328,6 +380,10 @@ void loop() {
       delay(100);
       arduboy.invert(false);
     }
+
+    //********************
+    //**PRINTING SECTION**
+    //********************
 
     //print all faces
     for (int i = 0; i < 16; i++) {
@@ -361,6 +417,18 @@ void loop() {
     arduboy.drawRect(42, 21, 22, 22);
     arduboy.drawRect(21, 42, 22, 22);
 
+    //print score
+    arduboy.drawRect(70, 30, 55, 10);
+    arduboy.setCursor(75, 30);
+    arduboy.print(score);
+
+    //print timer
+    arduboy.drawRect(50, 50, 70, 10);
+    arduboy.fillRect(50, 50, (now + timerSize - millis()) / 70, 10);
+
+    // arduboy.print((now + 5000-millis())/500);
+
+
     if (lives <= 0) {
       gamePhase = 2;
     }
@@ -376,13 +444,17 @@ void loop() {
     arduboy.print("GAME OVER");
     arduboy.setCursor(40, 10);
     arduboy.print("Play again");
+    arduboy.setCursor(20, 30);
+    arduboy.print("Your score is:");
+    arduboy.print(score);
     arduboy.setCursor(20, 50);
     arduboy.print("Press Button A!");
     if (arduboy.justPressed(A_BUTTON)) {
       gamePhase = 1;
       lives = 3;
       score = 0;
-      for(int i = 0; i<16;i++){
+      timerSize = 5000;
+      for (int i = 0; i < 16; i++) {
         board[i] = -1;
       }
       now = millis();
