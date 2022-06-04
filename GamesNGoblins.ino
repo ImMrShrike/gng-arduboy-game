@@ -2,6 +2,8 @@
 //02/06/2022
 #include <Arduboy2.h>
 #include <time.h>
+#include <EEPROM.h>
+#include <ArduboyTones.h>
 
 Arduboy2 arduboy;
 
@@ -17,6 +19,9 @@ int firstRowofClouds = 0;
 int secondRowofClouds = 0;
 int lightning = 0;
 int timerSize = 5000;
+ArduboyTones sound(arduboy.audio.enabled);
+int toggleSound = 1;
+
 
 
 //ordine sinistra sopra destra sotto
@@ -96,31 +101,16 @@ const uint8_t PROGMEM fullHeart[] = {
   0x00, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff, 0xff, 0x7f, 0x3f, 0x1f, 0x0f, 0x07, 0x03, 0x00,
 };
 
-
-const uint8_t PROGMEM chtulu[] = {
-  16, 16,
-  0x00, 0xf0, 0x1e, 0x01, 0x39, 0x39, 0x01, 0x01, 0x01, 0x01, 0x39, 0x39, 0x01, 0x1e, 0xf0, 0x00,
-  0xfc, 0x07, 0x00, 0x00, 0xff, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0xff, 0x00, 0x00, 0x07, 0xfc,
-};
-
-const uint8_t PROGMEM star[] = {
-  16, 16,
-  0x80, 0x40, 0x20, 0x90, 0x88, 0x84, 0x82, 0xf9, 0xf9, 0x82, 0x84, 0x88, 0x90, 0x20, 0x40, 0x80,
-  0x01, 0x02, 0x04, 0x09, 0x11, 0x21, 0x41, 0x9f, 0x9f, 0x41, 0x21, 0x11, 0x09, 0x04, 0x02, 0x01,
-};
-
-const uint8_t PROGMEM goblin[] = {
-  16, 16,
-  0x00, 0x1f, 0xfe, 0x04, 0x34, 0x36, 0x02, 0x02, 0x02, 0x02, 0x26, 0x24, 0x04, 0xfe, 0x1f, 0x00,
-  0x00, 0x00, 0x00, 0x1f, 0x20, 0x26, 0x24, 0x76, 0x64, 0x27, 0x24, 0x20, 0x1f, 0x00, 0x00, 0x00,
-};
-
 const uint8_t PROGMEM cloud[] = {
   16, 8,
   0x50, 0x9c, 0x86, 0x02, 0x02, 0x06, 0x0c, 0x18, 0x34, 0x26, 0x22, 0x12, 0x11, 0x23, 0x0e, 0x08,
 };
 
-
+uint16_t jingle[] = {
+  NOTE_G5, 150, NOTE_G5, 150, NOTE_G5, 150, NOTE_G5, 200, NOTE_REST, 250, NOTE_GS5, 250, NOTE_A5, 250, NOTE_AS5, 250,
+  NOTE_B5, 250,  NOTE_C6, 250, NOTE_CS6, 250, NOTE_D6, 200, NOTE_REST, 250 , NOTE_D5, 150, NOTE_D5, 300,
+  TONES_END
+};
 
 //genera un pezzo a caso che sia possibile inserire nelle caselle vuote disponibili
 int generateRandomPart() {
@@ -208,17 +198,25 @@ void checkInput() {
   now = millis();
   if (board[(4 * buttonPressed) + randomPart] == -1) {
     board[(4 * buttonPressed) + randomPart] = randomFace;
+    if (toggleSound) {
+      sound.tone(1000, 50);
+    }
   }
   else {
     wrongMove = 1;
-    timerSize += 200;
+    timerSize = timerSize <= 4500 ? timerSize + 500 : 5000;
   }
 }
 
 void checkForClearedFaces() {
   //check for cleared faces
+  int checkAllClear = 0;
+
   for (int i = 0; i <= 12; i += 4) {
     if (board[i + 0] != -1 && board[i + 1] != -1 && board[i + 2] != -1 && board[i + 3] != -1) {
+
+      checkAllClear = 1;
+
       if (board[i + 0] == board[i + 1] && board[i + 0] == board[i + 2] && board[i + 0] == board[i + 3]) {
         score += 300;
       }
@@ -235,17 +233,7 @@ void checkForClearedFaces() {
       board[i + 1] = -1;
       board[i + 2] = -1;
       board[i + 3] = -1;
-      arduboy.invert(true);
-      delay(100);
-      arduboy.invert(false);
-      delay(100);
-      arduboy.invert(true);
-      delay(100);
-      arduboy.invert(false);
-      delay(100);
-      arduboy.invert(true);
-      delay(100);
-      arduboy.invert(false);
+
       if (timerSize < 1000) {
         timerSize = 1000;
       }
@@ -255,17 +243,51 @@ void checkForClearedFaces() {
       now = millis();
     }
   }
+
+  if (checkAllClear) {
+    int allClear = 1;
+    checkAllClear = 0;
+    for (int i = 0; i < 16; i++) {
+      if (board[i] != -1) {
+        allClear = 0;
+        break;
+      }
+    }
+    if (allClear) {
+      if (lives < 3) {
+        lives++;
+      }
+      score += 500;
+      if (toggleSound) {
+        sound.tone(1200, 200, 1500, 200, 1200, 200);
+      }
+    }
+    else {
+      if (toggleSound) {
+        sound.tone(1200, 200, 1200, 200, 1200, 200);
+      }
+    }
+    arduboy.invert(true);
+    delay(100);
+    arduboy.invert(false);
+    delay(100);
+    arduboy.invert(true);
+    delay(100);
+    arduboy.invert(false);
+    delay(100);
+    arduboy.invert(true);
+    delay(100);
+    arduboy.invert(false);
+  }
+
 }
 
 void loop() {
-
-
   if (gamePhase == 0) {
 
     arduboy.clear();
 
     arduboy.pollButtons();
-
 
     Sprites::drawOverwrite((firstRowofClouds % 144) - 15, 8, cloud, 0);
     Sprites::drawOverwrite(((firstRowofClouds + 12) % 144) - 15, 7, cloud, 0);
@@ -289,12 +311,17 @@ void loop() {
     secondRowofClouds += 2;
     firstRowofClouds++;
 
-    if (random(0, 80) == 0) {
+    if (random(0, 40) == 0) {
       for (int i = 0; i <= random(1, 4); i++) {
         arduboy.invert(++lightning % 2);
         delay(100);
         arduboy.invert(++lightning % 2);
         delay(100);
+      }
+      int thunderSound = random(35, 45);
+      int thunderLength = random(100, 300);
+      if (toggleSound) {
+        sound.tone(thunderSound, 50, thunderSound - 10, thunderLength - 50);
       }
     }
 
@@ -308,8 +335,19 @@ void loop() {
     arduboy.setCursor(20, 55);
     arduboy.print("Press Button A!");
     if (arduboy.justPressed(A_BUTTON)) {
+      if (toggleSound) {
+        sound.tonesInRAM(jingle);
+      }
+      arduboy.clear();
+      arduboy.setCursor(30, 25);
+      arduboy.print("GAME START!");
+      arduboy.display();
+      delay(3600);
       gamePhase++;
       now = millis();
+    }
+    if (arduboy.justPressed(B_BUTTON)) {
+      toggleSound = (toggleSound + 1) % 2;
     }
     arduboy.display();
   }
@@ -368,6 +406,17 @@ void loop() {
     if (wrongMove) {
       lives--;
       wrongMove = 0;
+
+      if (toggleSound) {
+        if (lives > 0) {
+
+          sound.tone(500, 200, 500, 200, 500, 200);
+        }
+        else {
+          sound.tone(500, 200, 500, 200, 200, 400);
+        }
+      }
+
       arduboy.invert(true);
       delay(100);
       arduboy.invert(false);
@@ -437,7 +486,6 @@ void loop() {
   }
   else if (gamePhase == 2) {
     arduboy.clear();
-
     arduboy.pollButtons();
 
     arduboy.setCursor(20, 0);
