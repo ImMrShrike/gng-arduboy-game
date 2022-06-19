@@ -7,6 +7,12 @@
 
 Arduboy2 arduboy;
 
+struct HighScore {
+  char flag;
+  int initials[3];
+  int score;
+};
+
 int randomPart = 0;
 int randomFace = 0;
 int buttonPressed = -1;
@@ -21,6 +27,12 @@ int lightning = 0;
 int timerSize = 5000;
 ArduboyTones sound(arduboy.audio.enabled);
 int toggleSound = 1;
+HighScore scores[5];
+int minScore = 0;
+int leaderBoardCalculated = 0;
+int scoreIndex = 0;
+int letterPosition = 0;
+int initials[3] = {65, 65, 65};
 
 
 
@@ -106,6 +118,57 @@ const uint8_t PROGMEM cloud[] = {
   0x50, 0x9c, 0x86, 0x02, 0x02, 0x06, 0x0c, 0x18, 0x34, 0x26, 0x22, 0x12, 0x11, 0x23, 0x0e, 0x08,
 };
 
+const uint8_t PROGMEM tsugoTopLeft[] = {
+  8, 8,
+  0x00, 0xe0, 0xf8, 0x8c, 0x8e, 0x9f, 0xbf, 0xff,
+};
+
+const uint8_t PROGMEM tsugoTopRight[] = {
+  8, 8,
+  0xff, 0xbf, 0x9f, 0x8e, 0x8c, 0xf8, 0xe0, 0x00,
+};
+
+const uint8_t PROGMEM tsugoBottomLeft[] = {
+  8, 8,
+  0x01, 0x07, 0x3d, 0x79, 0xc3, 0xb7, 0xa4, 0x96,
+};
+
+const uint8_t PROGMEM tsugoBottomRight[] = {
+  8, 8,
+  0xa6, 0x94, 0xb7, 0xc3, 0x79, 0x3d, 0x07, 0x01,
+};
+
+
+const uint8_t PROGMEM maskTopLeft[] = {
+  8, 8,
+  0x0c, 0x02, 0x12, 0x31, 0x75, 0x65, 0x45, 0x09,
+};
+
+const uint8_t PROGMEM maskTopRight[] = {
+  8, 8,
+  0x09, 0x45, 0x65, 0x75, 0x31, 0x12, 0x02, 0x0c,
+};
+
+const uint8_t PROGMEM maskBottomLeft[] = {
+  8, 8,
+  0x06, 0x09, 0x12, 0x24,  0x44,  0x54, 0x88, 0xa9,
+};
+
+const uint8_t PROGMEM maskBottomRight[] = {
+  8, 8,
+  0xa9, 0x88, 0x54, 0x44, 0x24, 0x12, 0x09, 0x06,
+};
+
+const uint8_t PROGMEM speakerOn[] = {
+  8, 8,
+  0x18, 0x3c, 0x7e, 0xff, 0xff, 0x00, 0x4a, 0x89,
+};
+
+const uint8_t PROGMEM speakerOff[] = {
+  8, 8,
+  0x18, 0x3c, 0x7e, 0xff, 0xff, 0x00, 0x00, 0x00,
+};
+
 uint16_t jingle[] = {
   NOTE_G5, 150, NOTE_G5, 150, NOTE_G5, 150, NOTE_G5, 200, NOTE_REST, 250, NOTE_GS5, 250, NOTE_A5, 250, NOTE_AS5, 250,
   NOTE_B5, 250,  NOTE_C6, 250, NOTE_CS6, 250, NOTE_D6, 200, NOTE_REST, 250 , NOTE_D5, 150, NOTE_D5, 300,
@@ -157,36 +220,52 @@ void printFacePartOnPosition(int x, int y, int face, int part ) {
   }
   else if (face == 2) {
     if (part == 0) {
-      Sprites::drawOverwrite(x, y, ogreTopLeft, 0);
+      Sprites::drawOverwrite(x, y, tsugoTopLeft, 0);
     }
     else if (part == 1) {
-      Sprites::drawOverwrite(x, y, ogreTopRight, 0);
+      Sprites::drawOverwrite(x, y, tsugoTopRight, 0);
     }
     else if (part == 2) {
-      Sprites::drawOverwrite(x, y, ogreBottomLeft, 0);
+      Sprites::drawOverwrite(x, y, tsugoBottomLeft, 0);
     }
     else if (part == 3) {
-      Sprites::drawOverwrite(x, y, ogreBottomRight, 0);
+      Sprites::drawOverwrite(x, y, tsugoBottomRight, 0);
     }
   }
   else if (face == 3) {
     if (part == 0) {
-      Sprites::drawOverwrite(x, y, ogreTopLeft, 0);
+      Sprites::drawOverwrite(x, y, maskTopLeft, 0);
     }
     else if (part == 1) {
-      Sprites::drawOverwrite(x, y, ogreTopRight, 0);
+      Sprites::drawOverwrite(x, y, maskTopRight, 0);
     }
     else if (part == 2) {
-      Sprites::drawOverwrite(x, y, ogreBottomLeft, 0);
+      Sprites::drawOverwrite(x, y, maskBottomLeft, 0);
     }
     else if (part == 3) {
-      Sprites::drawOverwrite(x, y, ogreBottomRight, 0);
+      Sprites::drawOverwrite(x, y, maskBottomRight, 0);
     }
   }
 }
 
 
 void setup() {
+  HighScore score;
+  for (int i = 0; i < 5; i++) {
+    EEPROM.get(i * sizeof(HighScore), score);
+    if (score.flag != 'T') {
+      score.flag = 'T';
+      score.initials[0] = 65;
+      score.initials[1] = 65;
+      score.initials[2] = 65;
+      score.score = 0;
+      EEPROM.put(i * sizeof(HighScore), score);
+    }
+    if (i == 4) {
+      minScore = score.score;
+    }
+    scores[i] = score;
+  }
   arduboy.begin();
   arduboy.clear();
   arduboy.initRandomSeed();
@@ -328,12 +407,20 @@ void loop() {
     delay(100);
 
 
-    arduboy.setCursor(20, 25);
+    arduboy.setCursor(16, 24);
     arduboy.print("Games'N Goblins");
-    arduboy.setCursor(40, 35);
+    arduboy.setCursor(40, 32);
     arduboy.print("The Game");
-    arduboy.setCursor(20, 55);
-    arduboy.print("Press Button A!");
+    arduboy.setCursor(0, 46);
+    arduboy.print("A: Start Game");
+    arduboy.setCursor(0, 56);
+    arduboy.print("B: Toggle Sound");
+    if (toggleSound) {
+      Sprites::drawOverwrite(110, 56, speakerOn, 0);
+    }
+    else {
+      Sprites::drawOverwrite(110, 56, speakerOff, 0);
+    }
     if (arduboy.justPressed(A_BUTTON)) {
       if (toggleSound) {
         sound.tonesInRAM(jingle);
@@ -479,12 +566,20 @@ void loop() {
 
 
     if (lives <= 0) {
-      gamePhase = 2;
+      if (score < minScore) {
+        gamePhase = 2;
+      }
+      else {
+        gamePhase = 3;
+        leaderBoardCalculated = 0;
+      }
+
     }
 
     arduboy.display();
   }
   else if (gamePhase == 2) {
+
     arduboy.clear();
     arduboy.pollButtons();
 
@@ -492,11 +587,12 @@ void loop() {
     arduboy.print("GAME OVER");
     arduboy.setCursor(40, 10);
     arduboy.print("Play again");
-    arduboy.setCursor(20, 30);
+    arduboy.setCursor(20, 20);
     arduboy.print("Your score is:");
     arduboy.print(score);
     arduboy.setCursor(20, 50);
     arduboy.print("Press Button A!");
+
     if (arduboy.justPressed(A_BUTTON)) {
       gamePhase = 1;
       lives = 3;
@@ -507,6 +603,87 @@ void loop() {
       }
       now = millis();
     }
+    arduboy.display();
+  }
+  else if (gamePhase == 3) {
+    if (!leaderBoardCalculated) {
+      while (scores[scoreIndex].score > score) {
+        scoreIndex++;
+      }
+
+      for (int i = 4; i > scoreIndex; i--) {
+        scores[i] = scores[i - 1];
+      }
+
+      scores[scoreIndex].score = score;
+      leaderBoardCalculated = 1;
+    }
+
+    arduboy.clear();
+    arduboy.pollButtons();
+    arduboy.setCursor(30, 0);
+    arduboy.print("NAME  SCORE");
+
+    for (int i = 0; i < 5; i++) {
+      arduboy.setCursor(10, 15 + (10 * i));
+      arduboy.print(i + 1);
+      //arduboy.setCursor(30, 15 + (10 * i));
+      if (i != scoreIndex) {
+        for (int j = 0; j < 3; j++) {
+          arduboy.setCursor(30 + (i * 6), 15 + (10 * i));
+          arduboy.print(char(scores[i].initials[j]));
+        }
+      }
+      arduboy.setCursor(67, 15 + (10 * i));
+      arduboy.print(scores[i].score);
+    }
+
+    for (int i = 0; i < 3; i++) {
+      arduboy.setCursor(30 + (i * 6), 15 + (10 * scoreIndex));
+      arduboy.print(char(initials[i]));
+    }
+
+    //arduboy.setCursor(30 + (letterPosition * 6), 17 + (10 * scoreIndex));
+    arduboy.drawLine(30 + (letterPosition * 6), 23 + (10 * scoreIndex), 34 + (letterPosition * 6), 23 + (10 * scoreIndex));
+
+    if (arduboy.justPressed(UP_BUTTON)) {
+      initials[letterPosition] = initials[letterPosition] < 90 ? initials[letterPosition] + 1 : 65;
+
+    }
+    if (arduboy.justPressed(DOWN_BUTTON)) {
+      initials[letterPosition] = initials[letterPosition] > 65 ? initials[letterPosition] - 1 : 90;
+    }
+    if (arduboy.justPressed(LEFT_BUTTON)) {
+      if (letterPosition > 0) {
+        letterPosition--;
+      }
+    }
+    if (arduboy.justPressed(RIGHT_BUTTON)) {
+      if (letterPosition < 2) {
+        letterPosition++;
+      }
+    }
+
+    if (arduboy.justPressed(A_BUTTON)) {
+      scores[scoreIndex].initials[0] = initials[0];
+      scores[scoreIndex].initials[1] = initials[1];
+      scores[scoreIndex].initials[2] = initials[2];
+
+      for (int i = 0; i < 5; i++) {
+        EEPROM.put(i * sizeof(HighScore), scores[i]);
+      }
+
+      scoreIndex = 0;
+      gamePhase = 1;
+      lives = 3;
+      score = 0;
+      timerSize = 5000;
+      for (int i = 0; i < 16; i++) {
+        board[i] = -1;
+      }
+      now = millis();
+    }
+
     arduboy.display();
   }
 }
