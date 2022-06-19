@@ -252,14 +252,14 @@ void printFacePartOnPosition(int x, int y, int face, int part ) {
 void setup() {
   HighScore score;
   for (int i = 0; i < 5; i++) {
-    EEPROM.get(i * sizeof(HighScore), score);
-    if (score.flag != 'T') {
-      score.flag = 'T';
-      score.initials[0] = 65;
-      score.initials[1] = 65;
-      score.initials[2] = 65;
+    EEPROM.get((i * sizeof(HighScore)) + 500, score);
+    if (score.flag != 'V') {
+      score.flag = 'V';
+      score.initials[0] = 32;
+      score.initials[1] = 32;
+      score.initials[2] = 32;
       score.score = 0;
-      EEPROM.put(i * sizeof(HighScore), score);
+      EEPROM.put((i * sizeof(HighScore)) + 500, score);
     }
     if (i == 4) {
       minScore = score.score;
@@ -566,7 +566,7 @@ void loop() {
 
 
     if (lives <= 0) {
-      if (score < minScore) {
+      if (score <= minScore) {
         gamePhase = 2;
       }
       else {
@@ -630,7 +630,7 @@ void loop() {
       //arduboy.setCursor(30, 15 + (10 * i));
       if (i != scoreIndex) {
         for (int j = 0; j < 3; j++) {
-          arduboy.setCursor(30 + (i * 6), 15 + (10 * i));
+          arduboy.setCursor(30 + (j * 6), 15 + (10 * i));
           arduboy.print(char(scores[i].initials[j]));
         }
       }
@@ -670,9 +670,14 @@ void loop() {
       scores[scoreIndex].initials[2] = initials[2];
 
       for (int i = 0; i < 5; i++) {
-        EEPROM.put(i * sizeof(HighScore), scores[i]);
+        EEPROM.put((i * sizeof(HighScore)) + 500, scores[i]);
       }
 
+      minScore = scores[4].score;
+      letterPosition = 0;
+      initials[0] = 65;
+      initials[1] = 65;
+      initials[2] = 65;
       scoreIndex = 0;
       gamePhase = 1;
       lives = 3;
