@@ -105,20 +105,42 @@ void loop() {
     drawSoundBox();
 
     if (arduboy.justPressed(A_BUTTON)) {
-      if (isSoundOn) {
-        sound.tonesInRAM(jingle);
-      }
-      arduboy.clear();
-      arduboy.setCursor(30, 25);
-      arduboy.print("GAME START!");
-      arduboy.display();
-      delay(3600);
-      applyNewGameSettings();
+      gamePhase = NEW_GAME;
     }
     if (arduboy.justPressed(B_BUTTON)) {
       isSoundOn = (isSoundOn + 1) % 2;
     }
     arduboy.display();
+  }
+  else if (gamePhase == NEW_GAME) {
+    if (isSoundOn) {
+      sound.tonesInRAM(jingle);
+    }
+    arduboy.clear();
+    Sprites::drawOverwrite(0, 0, ogreTopLeft, 0);
+    Sprites::drawOverwrite(8, 0, ogreTopRight, 0);
+    Sprites::drawOverwrite(0, 8, ogreBottomLeft, 0);
+    Sprites::drawOverwrite(8, 8, ogreBottomRight, 0);
+
+    Sprites::drawOverwrite(112, 0, tsugoTopLeft, 0);
+    Sprites::drawOverwrite(120, 0, tsugoTopRight, 0);
+    Sprites::drawOverwrite(112, 8, tsugoBottomLeft, 0);
+    Sprites::drawOverwrite(120, 8, tsugoBottomRight, 0);
+
+    Sprites::drawOverwrite(0, 48, goblinTopLeft, 0);
+    Sprites::drawOverwrite(8, 48, goblinTopRight, 0);
+    Sprites::drawOverwrite(0, 56, goblinBottomLeft, 0);
+    Sprites::drawOverwrite(8, 56, goblinBottomRight, 0);
+
+    Sprites::drawOverwrite(112, 48, maskTopLeft, 0);
+    Sprites::drawOverwrite(120, 48, maskTopRight, 0);
+    Sprites::drawOverwrite(112, 56, maskBottomLeft, 0);
+    Sprites::drawOverwrite(120, 56, maskBottomRight, 0);
+    arduboy.setCursor(32, 28);
+    arduboy.print("GAME START!");
+    arduboy.display();
+    delay(3600);
+    applyNewGameSettings();
   }
   else if (gamePhase == GAME_SCREEN) {
 
@@ -245,7 +267,7 @@ void loop() {
     drawSoundBox();
 
     if (arduboy.justPressed(A_BUTTON)) {
-      applyNewGameSettings();
+      gamePhase = NEW_GAME;
     }
 
     if (arduboy.justPressed(B_BUTTON)) {
@@ -296,7 +318,7 @@ void loop() {
 
     //draw cursor
     arduboy.drawLine(30 + (letterPosition * 6), 23 + (10 * newHighScoreIndex), 34 + (letterPosition * 6), 23 + (10 * newHighScoreIndex));
-    
+
     drawSoundBox();
 
     if (arduboy.justPressed(UP_BUTTON)) {
@@ -334,7 +356,7 @@ void loop() {
       initials[0] = 'A';
       initials[1] = 'A';
       initials[2] = 'A';
-      applyNewGameSettings();
+      gamePhase = NEW_GAME;
     }
 
     if (arduboy.justPressed(B_BUTTON)) {
